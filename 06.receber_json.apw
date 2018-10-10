@@ -1,5 +1,5 @@
 #include 'protheus.ch'
-#include 'wsrestful.ch'
+#include 'restful.ch'
 
 // Exemplos com status HTTP
 WsRestful ReceberJson Description "Exemplos com JSON na requisição" Format APPLICATION_JSON
