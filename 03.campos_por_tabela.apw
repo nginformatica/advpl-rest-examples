@@ -1,0 +1,64 @@
+#include 'protheus.ch'
+#include 'wsrestful.ch'
+
+// Agora teremos um serviço que disponibilizará uma rota:
+// - [GET /campos/{tabela}]
+// Onde `tabela` referencia a chave representativa de uma tabela do Protheus,
+// correspondendo ao `X2_CHAVE`
+// No exemplo anterior, recebemos os dados via query params. Agora, o fazemos
+// embutido no caminho (path)
+// Quando não encontrarmos a tabela na SX2, iremos emitir um erro 404
+WsRestful CamposPorTabela Description "Campos por tabela" Format APPLICATION_JSON
+    // Assim como um query param, um path param também precisa estar definido no
+    // protótipo do serviço
+    WsData Tabela As String Optional
+
+    WsMethod GET Campos Description "Lista os campos de uma tabela e seus nomes" Path "/campos/{tabela}"
+End WsRestful
+
+// Implementação do método que traz os campos por tabela
+WsMethod GET Alta QueryParam Tabela WsRestful CamposPorTabela
+    // Resultado em JSON com o nome da tabela vindo de `X2_NOME` e seus campos da SX3
+    // O slot de campos é um objeto JSON composto pelo `X3_CAMPO` da `SX3` como chave
+    // e `X3_TITULO` como valor
+    Local oResultado := JsonObject():New()
+
+    // Abertura da SX2 e SX3. Aqui utilizamos o driver CTREECDX para abrir
+    // diretamente do sistema de arquivos em modo compartilhado e somente leitura em
+    // uma empresa de teste 99
+    DbUseArea( .T., "CTREECDX", "\system\sx2990.dtc", "SX2", .T., .T. )
+    DbUseArea( .T., "CTREECDX", "\system\sx3990.dtc", "SX3", .T., .T. )
+    DbSelectArea( "SX2" )
+    DbSelectArea( "SX3" )
+    SX2->( DbSetOrder( 1 ) )
+    SX3->( DbSetOrder( 1 ) )
+    // Tentamos posicionar na SX2 pela tabela passada
+    If SX2->( DbSeek( ::Tabela ) ) .And. SX3->( DbSeek( ::Tabela ) )
+        oResultado[ "chave" ]  := SX2->X2_CHAVE
+        oResultado[ "nome" ]   := SX2->X2_NOME
+        oResultado[ "campos" ] := JsonObject():New()
+        Do While !SX3->( Eof() )
+            oResultado[ "campos", SX3->X3_CAMPO ] := SX3->X3_TITULO
+            SX3->( DbSkip() )
+        EndDo
+
+        // Enviamos os dados ao cliente
+        ::SetResponse( oResultado:ToJson() )
+    Else
+        // Ops, a tabela não foi encontrada!
+        // Utilizamos a função `SetRestFault( nCodigo, cMensagem )` para definir
+        // um estado de erro. `nCodigo` corresponde a um código HTTP válido para o
+        // erro. No caso, representamos "não encontrado" como 404 e, ao fim, retornamos
+        // .F. para informar que houve um erro. Deixe os erros fluirem, não se preocupe,
+        // porque é responsabilidade do framework interceptá-los
+        SetRestFault( 404, "Tabela não encontrada" )
+        Return .F.
+    EndIf
+
+    // Lembre-se, por boa prática, de fechar as áreas de trabalho abertas e preferir
+    // a utilização de aliases ao invés de chamar as funções globalmente
+    SX3->( DbCloseArea() )
+    SX2->( DbCloseArea() )
+
+    FreeObj( oResultado )
+Return .T.
