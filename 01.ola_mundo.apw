@@ -1,7 +1,7 @@
 #include 'protheus.ch'
 // Um passo importante é incluir o arquivo de cabeçalho que adiciona suporte
 // à sintaxe que utilizaremos
-#include 'wsrestful.ch'
+#include 'restful.ch'
 
 // O primeiro passo é definir o protótipo do nosso serviço REST e informar uma
 // descrição e um formato para serem exibidos na lista de serviços
