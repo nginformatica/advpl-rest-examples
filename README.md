@@ -12,3 +12,4 @@ características funcionais.
 - [Campos por tabela](./03.campos_por_tabela.apw) - uma única rota `GET` que permite trazer os campos definidos na `SX3` para uma tabela existente na `SX2` recebendo o identificador do arquivo da tabela na própria URL.
 - [Headers](./04.headers.apw) - demonstração de como receber e enviar headers HTTP.
 - [Status](./05.status.apw) - devolvendo códigos de status HTTP.
+- [Receber JSON](./06.receber_json.apw) - recebendo JSON como corpo de uma requisição via `POST`

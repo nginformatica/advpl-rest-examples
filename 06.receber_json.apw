@@ -1,0 +1,25 @@
+#include 'protheus.ch'
+#include 'wsrestful.ch'
+
+// Exemplos com status HTTP
+WsRestful ReceberJson Description "Exemplos com JSON na requisição" Format APPLICATION_JSON
+    WsMethod POST Root Description "Recebe um JSON e mostra alguns dados no console" Path "/"
+End WsRestful
+
+WsMethod POST Root WsRestful ReceberJson
+    // `::GetContent()` retorna o corpo da requisição em bytes
+    Local cCorpo := ::GetContent()
+    // Objeto que irá guardar o JSON de entrada
+    Local oJson := JsonObject():New()
+
+    // Parsing da entrada
+    oJson:FromJson( cCorpo )
+
+    // Para fins didáticos, apenas exibimos os valores de "nome" e "idade"
+    // no terminal
+    ConOut( oJson[ "nome" ] )
+    ConOut( oJson[ "idade" ] )
+
+    // Hora de limpar a bagunça
+    FreeObj( oJson )
+Return .T.
