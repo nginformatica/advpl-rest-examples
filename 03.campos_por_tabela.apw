@@ -1,5 +1,5 @@
 #include 'protheus.ch'
-#include 'wsrestful.ch'
+#include 'restful.ch'
 
 // Agora teremos um serviço que disponibilizará uma rota:
 // - [GET /campos/{tabela}]
@@ -29,21 +29,25 @@ WsMethod GET Campos QueryParam Tabela WsRestful CamposPorTabela
     DbUseArea( .T., "CTREECDX", "\system\sx2990.dtc", "SX2", .T., .T. )
     DbUseArea( .T., "CTREECDX", "\system\sx3990.dtc", "SX3", .T., .T. )
     DbSelectArea( "SX2" )
-    DbSelectArea( "SX3" )
     SX2->( DbSetOrder( 1 ) )
-    SX3->( DbSetOrder( 1 ) )
     // Tentamos posicionar na SX2 pela tabela passada
-    If SX2->( DbSeek( ::Tabela ) ) .And. SX3->( DbSeek( ::Tabela ) )
+    If SX2->( DbSeek( Upper( ::Tabela ) ) )
         oResultado[ "chave" ]  := SX2->X2_CHAVE
         oResultado[ "nome" ]   := SX2->X2_NOME
         oResultado[ "campos" ] := JsonObject():New()
+
+        // Filtramos os campos da SX3 pertencentes à tabela
+        DbSelectArea( "SX3" )
+        SX3->( DbSetFilter( { || FIELD->X3_ARQUIVO == SX2->X2_CHAVE }, "X3_ARQUIVO=SX2->X2_CHAVE" ) )
+        SX3->( DbGoTop() )
         Do While !SX3->( Eof() )
             oResultado[ "campos", SX3->X3_CAMPO ] := SX3->X3_TITULO
             SX3->( DbSkip() )
         EndDo
+        SX3->( DbCloseArea() )
 
         // Enviamos os dados ao cliente
-        ::SetResponse( oResultado:ToJson() )
+        ::SetResponse( FWJsonSerialize( oResultado ) )
     Else
         // Ops, a tabela não foi encontrada!
         // Utilizamos a função `SetRestFault( nCodigo, cMensagem )` para definir
@@ -57,7 +61,6 @@ WsMethod GET Campos QueryParam Tabela WsRestful CamposPorTabela
 
     // Lembre-se, por boa prática, de fechar as áreas de trabalho abertas e preferir
     // a utilização de aliases ao invés de chamar as funções globalmente
-    SX3->( DbCloseArea() )
     SX2->( DbCloseArea() )
 
     FreeObj( oResultado )
