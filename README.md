@@ -13,7 +13,7 @@ características funcionais.
 - [Headers](./04.headers.apw) - demonstração de como receber e enviar headers HTTP.
 - [Status](./05.status.apw) - devolvendo códigos de status HTTP.
 - [Receber JSON](./06.receber_json.apw) - recebendo JSON como corpo de uma requisição via `POST`.
-- [Tarefas](./07.tarefas.apw) - `TODO` - cadastro completo de lista de tarefas contemplando `GET`, `POST`,
+- [Tarefas](./07.tarefas.apw) - cadastro completo de lista de tarefas contemplando `GET`, `POST`,
 `PUT` e `DELETE` com múltiplos caminhos e validações.
 - [Download de arquivo](./07.download_de_arquivo.apw) - `TODO` - demonstração de como podemos forçar o download de
 um arquivo do servidor e customizar suas propriedades.
