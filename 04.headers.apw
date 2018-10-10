@@ -1,5 +1,5 @@
 #include 'protheus.ch'
-#include 'wsrestful.ch'
+#include 'restful.ch'
 
 // Exemplos com headers
 WsRestful Headers Description "Exemplos com headers" Format APPLICATION_JSON
