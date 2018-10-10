@@ -39,9 +39,9 @@ WsMethod GET Alta QueryParam Palavra WsRestful TransformarCaixa
     // Também podemos usar <OBJETO>:<NOME> := <VALOR>, mas isso não preservará
     // o nome que definirmos durante a conversão para string, deixando o nome
     // da propriedade sempre todo maiúsculo
-    oResultado[ "entrada" ] := Palavra
+    oResultado[ "entrada" ] := ::Palavra
     // E aqui, de fato, transformamos a palavra!
-    oResultado[ "saida" ] := Upper( Palavra )
+    oResultado[ "saida" ] := Upper( ::Palavra )
 
     // Enviamos os dados para o client serializando-os
     // Podemos tanto utilizar a `FWJsonSerialize` quando chamar
@@ -61,8 +61,8 @@ Return .T.
 // ao invés de `Upper` para transformar
 WsMethod GET Baixa QueryParam Palavra WsRestful TransformarCaixa
     Local oResultado := JsonObject():New()
-    oResultado[ "entrada" ] := Palavra
-    oResultado[ "saida" ] := Lower( Palavra )
+    oResultado[ "entrada" ] := ::Palavra
+    oResultado[ "saida" ] := Lower( ::Palavra )
 
     ::SetResponse( FWJsonSerialize( oResultado ) )
     FreeObj( oResultado )
