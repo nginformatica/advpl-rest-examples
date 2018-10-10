@@ -1,0 +1,183 @@
+#include 'protheus.ch'
+#include 'restful.ch'
+
+// Nome da tabela do sistema que utilizaremos
+#define TABELA_TAREFAS "tarefas"
+
+// Preparamos a base de dados para nosso CRUD
+// Utilizaremos o driver SQLite do sistema disponível a partir do Protheus 12
+// Invoque `U_TAREFAS` antes de começar a fazer as requisições para preparar a
+// tabela
+User Function Tarefas()
+    Local aStruct := {}
+
+    AAdd( aStruct, { "CONTEUDO", "C", 128, 0 } ) // Conteúdo da tarefa
+    AAdd( aStruct, { "DT_CRIACAO", "C", 8, 0 } ) // Data que foi criada
+    AAdd( aStruct, { "HR_CRIACAO", "C", 8, 0 } ) // Hora que foi criada
+    AAdd( aStruct, { "DT_COMPLET", "C", 8, 0 } ) // Data que foi completada
+    AAdd( aStruct, { "HR_COMPLET", "C", 8, 0 } ) // Hora que foi completada
+
+    DbCreate( TABELA_TAREFAS, aStruct, "SQLITE_SYS" )
+Return
+
+WsRestful Tarefas Description "Gerenciador de tarefas" Format APPLICATION_JSON
+    // ID de uma tarefa. O `As Integer` já injeta o parâmetro como um numérico
+    // do AdvPL para a gente, sem a necessidade de usar `Val`!
+    WsData Id As Integer Optional
+
+    // Métodos e suas rotas
+    // Você pode ter quantos `WsMethod` forem necessários, desde que a chave
+    // seja único por verbo + id. da ação
+    //
+    //     (verbo) (Id. da ação)  (descrição documentativa) (rota real da requisição)
+    //        |         |                 |__________.              |
+    //        V         V                            V              V
+    WsMethod GET    ListarTarefas   Description "Listar tarefas"   Path "/tarefas"
+    WsMethod POST   CriarTarefa     Description "Criar tarefa"     Path "/tarefa"
+    WsMethod PUT    AtualizarTarefa Description "Atualizar tarefa" Path "/tarefa/{id}"
+    WsMethod DELETE ApagarTarefa    Description "Apagar tarefa"    Path "/tarefa/{id}"
+End WsRestful
+
+// [GET /tarefas] - listar todas as tarefas
+// Retorna um JSON como array de objetos com as informações de cada tarefa
+WsMethod GET ListarTarefas WsRestful Tarefas
+    // Array de retorno
+    Local aRetorno := {}
+    // Alias de tabela SQLite
+    Local cTarefas := GetNextAlias()
+    Local oTarefa
+
+    // Abrimos a tabela de tarefas e percorremos os registros
+    DbUseArea( .T., "SQLITE_SYS", TABELA_TAREFAS, cTarefas, .T., .T. )
+    DbSelectArea( cTarefas )
+    Do While !( cTarefas )->( Eof() )
+        // Criamos um objeto JSON para cada registro
+        // Usaremos o número do registro como ID
+        // Devolveremos a data e hora de criação em um formato ISO padrão
+        // Uma tarefa está completada se há registro de data que ela foi completada
+        // Devolvemos o conteúdo sem espaços sobrando
+        oTarefa := JsonObject():New()
+        oTarefa[ "id" ]         := ( cTarefas )->( RecNo() )
+        oTarefa[ "criada_em" ]  := FWTimeStamp( 3, SToD( ( cTarefas )->DT_CRIACAO ), ( cTarefas )->HR_CRIACAO )
+        oTarefa[ "completada" ] := !Empty( ( cTarefas )->DT_COMPLET )
+        oTarefa[ "conteudo" ]   := AllTrim( ( cTarefas )->CONTEUDO )
+        // Adicionamos cada objeto JSON ao retorno e vamos para o próximo registro
+        AAdd( aRetorno, oTarefa )
+        ( cTarefas )->( DbSkip() )
+    EndDo
+
+    // Fechamos a área de trabalho de tarefas e devolvemos a lista de tarefas
+    ( cTarefas )->( DbCloseArea() )
+    ::SetResponse( FWJsonSerialize( aRetorno ) )
+Return .T.
+
+// [POST /tarefa] - criar uma tarefa
+// Deve receber no corpo da requisição JSON no formato `{ "conteudo": "..." }`
+WsMethod POST CriarTarefa WsRestful Tarefas
+    Local oJson := JsonObject():New()
+    Local oRetorno
+    Local cTarefas
+    Local cData
+    Local cHora
+
+    // `oJson` irá carregar os dados vindos do corpo da requisição
+    oJson:FromJson( ::GetContent() )
+    // Se o conteúdo não for informado, é um `BAD REQUEST`
+    If Empty( oJson[ "conteudo" ] )
+        SetRestFault( 400, "É necessário informar o conteúdo" )
+        Return .F.
+    EndIf
+
+    // Abrimos a tabela de tarefas, computamos em strings a data e hora atuais
+    // e gravamos o registro com bloqueio
+    cTarefas := GetNextAlias()
+    cData    := DToS( Date() )
+    cHora    := Time()
+    DbUseArea( .T., "SQLITE_SYS", TABELA_TAREFAS, cTarefas )
+    DbSelectArea( cTarefas )
+    ( cTarefas )->( DbAppend( .F. ) )
+    ( cTarefas )->CONTEUDO   := oJson[ "conteudo" ]
+    ( cTarefas )->DT_CRIACAO := cData
+    ( cTarefas )->HR_CRIACAO := cHora
+    ( cTarefas )->( DbCommit() )
+
+    // É idiomático em REST retornarmos as informações do registro criado
+    oRetorno := JsonObject():New()
+    oRetorno[ "id" ]         := ( cTarefas )->( RecNo() )
+    oRetorno[ "conteudo" ]   := oJson[ "conteudo" ]
+    oRetorno[ "criada_em" ]  := FWTimeStamp( 3, SToD( cData ), cHora )
+    oRetorno[ "completada" ] := .F.
+
+    // Iremos responder com um JSON com o retorno serializado em JSON
+    // Também definimos o status HTTP como 201, isto é, `CREATED`
+    ( cTarefas )->( DbCloseArea() )
+    ::SetStatus( 201 )
+    ::SetContentType( APPLICATION_JSON )
+    ::SetResponse( FWJsonSerialize( oRetorno ) )
+    // Hora de liberar memória
+    FreeObj( oJson )
+    FreeObj( oRetorno )
+Return .T.
+
+// [PUT /tarefa/{id}] - atualiza uma tarefa pelo ID
+// O formato do corpo da requisição é o mesmo do de criação
+WsMethod PUT AtualizarTarefa PathParam Id WsRestful Tarefas
+    Local oJson := JsonObject():New()
+    Local oRetorno
+    Local cTarefas
+    Local cData
+    Local cHora
+
+    // `oJson` irá carregar os dados vindos do corpo da requisição
+    oJson:FromJson( ::GetContent() )
+    // Se o conteúdo não for informado, é um `BAD REQUEST`
+    If Empty( oJson[ "conteudo" ] )
+        SetRestFault( 400, "É necessário informar o conteúdo" )
+        Return .F.
+    EndIf
+
+    // Abrimos a tabela de tarefas e atualizamos o conteúdo
+    cTarefas := GetNextAlias()
+    DbUseArea( .T., "SQLITE_SYS", TABELA_TAREFAS, cTarefas )
+    DbSelectArea( cTarefas )
+    ( cTarefas )->( DbRLock() )
+    ( cTarefas )->CONTEUDO := oJson[ "conteudo" ]
+    ( cTarefas )->( DbCommit() )
+    ( cTarefas )->( DbUnlock() )
+
+    // É idiomático em REST retornarmos as informações do registro atualizado
+    oRetorno := JsonObject():New()
+    oRetorno[ "id" ]         := ( cTarefas )->( RecNo() )
+    oRetorno[ "criada_em" ]  := FWTimeStamp( 3, SToD( ( cTarefas )->DT_CRIACAO ), ( cTarefas )->HR_CRIACAO )
+    oRetorno[ "completada" ] := !Empty( ( cTarefas )->DT_COMPLET )
+    oRetorno[ "conteudo" ]   := AllTrim( ( cTarefas )->CONTEUDO )
+
+    // Iremos responder com um JSON com o retorno serializado em JSON
+    ( cTarefas )->( DbCloseArea() )
+    ::SetContentType( APPLICATION_JSON )
+    ::SetResponse( FWJsonSerialize( oRetorno ) )
+    // Hora de liberar memória
+    FreeObj( oJson )
+    FreeObj( oRetorno )
+Return .T.
+
+// [DELETE /tarefa/{id}] - apaga uma tarefa pelo ID
+// Retorna erro 404 se a tarefa não existir
+WsMethod DELETE ApagarTarefa PathParam Id WsRestful Tarefas
+    Local cTarefas := GetNextAlias()
+
+    // Abrimos a tabela de tarefas e tentamos posicionar no registro passado
+    DbUseArea( .T., "SQLITE_SYS", TABELA_TAREFAS, cTarefas )
+    DbSelectArea( cTarefas )
+    ( cTarefas )->( dbGoTo( ::Id ) )
+    If ( cTarefas )->( Eof() )
+        // Fim de arquivo indica que a tarefa não existe
+        SetRestFault( 404, "Tarefa não encontrada" )
+        Return .F.
+    EndIf
+
+    // Travamos o registro, deletamos e liberamos o bloqueio
+    ( cTarefas )->( DbRLock() )
+    ( cTarefas )->( DbDelete() )
+    ( cTarefas )->( DbCloseArea() )
+Return .T.
