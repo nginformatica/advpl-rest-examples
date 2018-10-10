@@ -1,0 +1,25 @@
+#include 'protheus.ch'
+// Um passo importante é incluir o arquivo de cabeçalho que adiciona suporte
+// à sintaxe que utilizaremos
+#include 'wsrestful.ch'
+
+// O primeiro passo é definir o protótipo do nosso serviço REST e informar uma
+// descrição e um formato para serem exibidos na lista de serviços
+WsRestful OlaMundo Description "Hello world em AdvPL REST" Format APPLICATION_JSON
+    // Definimos a rota /ola com despacho para o verbo GET
+    // A descrição servirá de documentação
+    WsMethod GET Ola Description "Retorna um JSON com uma mensagem com texto" Path "/ola"
+End WsRestful
+
+// Definimos a implementação do método GET Ola para o serviço REST que declaramos
+// acima
+WsMethod GET Ola WsRestful OlaMundo
+    // Chamamos `::SetResponse( cConteudo )` para definir o texto de saída para
+    // o consumidor da nossa API. Pode se utilizá-lo múltiplas vezes. O resultado
+    // final será concatenado. Assim, é possível enviar dados para o cliente de
+    // maneira parcial e "por prestações" :D
+    ::SetResponse( '{ "mensagem": "tudo é terrível!" }' )
+// Todo método deve retornar um valor lógico que informa se a operação finalizou
+// com sucesso
+Return .T.
+
