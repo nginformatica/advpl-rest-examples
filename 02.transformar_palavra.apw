@@ -1,0 +1,69 @@
+#include 'protheus.ch'
+#include 'wsrestful.ch'
+
+// Agora teremos um serviço que disponibilizará duas rotas:
+// - [GET /alta]
+// - [GET /baixa]
+// E receberá um parâmetro `palavra` via query string (`?palavra=`), ou seja, pela
+// URL. Um exemplo de consumo envolveria `?palavra=Terrivel`
+WsRestful TransformarCaixa Description "Transformar caixa" Format APPLICATION_JSON
+    // Todo dado de entrada precisa ser definido como uma propriedade do serviço
+    // O nome da propriedade precisa ser o mesmo do dado recebido, mas não depende
+    // se o valor é passado em caixa alta ou baixa
+    // As anotações `As String` e `Optional` servem a propósito de documentação
+    WsData Palavra As String Optional
+
+    // Rota GET para deixar uma string em caixa alta
+    WsMethod GET Alta Description "Deixa a string em caixa alta" Path "/alta"
+    // Rota GET para deixar uma stirng em caixa baixa
+    // Nas versões anteriores do AdvPL REST, só era possível existir um método GET
+    // e o tratamento de rotas precisava ser feito na mão. Atualmente, podemos definir
+    // um identificador único em [WsMethod <VERBO> <IDENTIFICADOR>] com um caminho [Path]
+    // que será respeitado durante a requisição!
+    WsMethod Get Baixa Description "Deixa a string em caixa baixa" Path "/baixa"
+End WsRestful
+
+// Implementação do método conversor para caixa alta
+// Utilizamos `QueryParam <PARAMETRO>` para definir a "injeção" do valor no
+// parâmetro durante a execução do método via query string
+// Podem existir múltiplos query parameters separados por vírgula, mas todo query
+// parameter precisa estar declarado no protótipo do serviço
+WsMethod GET Alta QueryParam Palavra WsRestful TransformarCaixa
+    // `oResultado` será um objeto JSON que irá carregar duas propriedades,
+    // `entrada` contendo a palavra passada e `saida` contendo a palavra
+    // transformada
+    Local oResultado := JsonObject():New()
+
+    // Para colocarmos uma propriedade no objeto JSON, utilizamos a notação
+    // <OBJETO>[ <NOME> ] := <VALOR>
+    // Também podemos usar <OBJETO>:<NOME> := <VALOR>, mas isso não preservará
+    // o nome que definirmos durante a conversão para string, deixando o nome
+    // da propriedade sempre todo maiúsculo
+    oResultado[ "entrada" ] := Palavra
+    // E aqui, de fato, transformamos a palavra!
+    oResultado[ "saida" ] := Upper( Palavra )
+
+    // Enviamos os dados para o client serializando-os
+    // Podemos tanto utilizar a `FWJsonSerialize` quando chamar
+    // `oResultado:ToJson()` nesse caso para termos uma string JSON, mas
+    // FWJsonSerialize irá funcionar independentemente se o dado for um objeto
+    // ou instância de `JsonObject`
+    ::SetResponse( FWJsonSerialize( oResultado ) )
+
+    // É boa prática limpar os *objetos* criados quando não mais utilizados
+    // Por boa prática, vide: não queremos estourar a memória do servidor e não
+    // podemos confiar no garbage collector
+    FreeObj( oResultado )
+// Chuchu beleza!
+Return .T.
+
+// A outra rota segue os mesmos padrões da anterior, mas utiliza `Lower`
+// ao invés de `Upper` para transformar
+WsMethod GET Baixa QueryParam Palavra WsRestful TransformarCaixa
+    Local oResultado := JsonObject():New()
+    oResultado[ "entrada" ] := Palavra
+    oResultado[ "saida" ] := Lower( Palavra )
+
+    ::SetResponse( FWJsonSerialize( oResultado ) )
+    FreeObj( oResultado )
+Return .T.
