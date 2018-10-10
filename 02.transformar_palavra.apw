@@ -1,5 +1,5 @@
 #include 'protheus.ch'
-#include 'wsrestful.ch'
+#include 'restful.ch'
 
 // Agora teremos um serviço que disponibilizará duas rotas:
 // - [GET /alta]
