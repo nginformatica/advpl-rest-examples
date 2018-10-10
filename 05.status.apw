@@ -1,0 +1,21 @@
+#include 'protheus.ch'
+#include 'wsrestful.ch'
+
+// Exemplos com status HTTP
+WsRestful StatusHttp Description "Exemplos com status HTTP" Format APPLICATION_JSON
+    WsMethod GET Status Description "Brincadeiras com alteração de status" Path "/status"
+End WsRestful
+
+// Ignore a ordem de execução abaixo. Preste atenção apenas no que
+// cada função se propõe a fazer
+WsMethod GET Status WsRestful StatusHttp
+    // Código de status padrão para "tá tudo certinho aqui" e que é enviado
+    // ao cliente se você não definir
+    ::SetStatus( 200 )
+
+    // Quando fizer alguma validação ou tratativa, utilize `SetRestFault`
+    // Consulte a tabela de status HTTP para mais informações
+    // Lembre-se de retornar .F. quão cedo for possível ao definir um erro
+    SetRestFault( 404, "Felicidade não encontrada" )
+    SetRestFault( 403, "Proibido, você não pode passar!" )
+Return .T.

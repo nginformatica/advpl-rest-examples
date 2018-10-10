@@ -10,3 +10,5 @@ características funcionais.
 - [Olá mundo!](./01.ola_mundo.apw) - seu primeiro webservice com apenas uma rota `GET` simples e retorno em JSON.
 - [Transformar palavra](./02.transformar_palavra.apw) - webservice com duas rotas `GET` para deixar palavras em caixa alta ou baixa.
 - [Campos por tabela](./03.campos_por_tabela.apw) - uma única rota `GET` que permite trazer os campos definidos na `SX3` para uma tabela existente na `SX2` recebendo o identificador do arquivo da tabela na própria URL.
+- [Headers](./04.headers.apw) - demonstração de como receber e enviar headers HTTP.
+- [Status](./05.status.apw) - devolvendo códigos de status HTTP.

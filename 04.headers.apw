@@ -1,0 +1,21 @@
+#include 'protheus.ch'
+#include 'wsrestful.ch'
+
+// Exemplos com headers
+WsRestful Headers Description "Exemplos com headers" Format APPLICATION_JSON
+    // Assim como path params e query params, header params são definidos como
+    // propriedades
+    WsData Authorization As String Optional
+
+    WsMethod GET Autorizacao Description "Devolve o conteúdo do header Authorization" Path "/headers"
+End WsRestful
+
+// Vamos receber o conteúdo do header `Authorization` e devolver como um
+// header chamado `Autorizacao`
+WsMethod GET Autorizacao HeaderParam Authorization WsRestful Headers
+    ::SetHeader( ::Authorization )
+
+    // Também podemos obter um header utilizando o método `::GetHeader`
+    // Exemplo exibindo no console o navegador do cliente
+    ConOut( ::GetHeader( "User-Agent" ) )
+Return .T.
