@@ -17,7 +17,7 @@ WsRestful CamposPorTabela Description "Campos por tabela" Format APPLICATION_JSO
 End WsRestful
 
 // Implementação do método que traz os campos por tabela
-WsMethod GET Alta QueryParam Tabela WsRestful CamposPorTabela
+WsMethod GET Campos QueryParam Tabela WsRestful CamposPorTabela
     // Resultado em JSON com o nome da tabela vindo de `X2_NOME` e seus campos da SX3
     // O slot de campos é um objeto JSON composto pelo `X3_CAMPO` da `SX3` como chave
     // e `X3_TITULO` como valor
